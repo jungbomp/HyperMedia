@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JPanel;
@@ -36,10 +38,13 @@ public class ImagePlayer extends JPanel implements ChangeListener {
     private String pathName;
     
     private FrameController frameCtl;
+    private AudioController audioCtl;
     
     private Boolean bPlayed;
 
     private int nbCurFrame;
+
+    private long period;
 
     /**
 	 * Create the panel.
@@ -98,6 +103,19 @@ public class ImagePlayer extends JPanel implements ChangeListener {
         bPlayed = false;
 
         nbCurFrame = 0;
+
+        slider.addMouseListener(new MouseAdapter() {
+        	@Override
+        	public void mouseReleased(MouseEvent e) {
+                try {
+                    audioCtl.setMillisecondPosition(getMillisecondFromFrame());
+                    period = System.currentTimeMillis();
+                } catch (Exception ex) {
+                    System.err.println(ex.getMessage());
+                    ex.printStackTrace();
+                }
+        	}
+        });
         
         // ActionListener
         btnPrev.addActionListener(new ActionListener() {
@@ -107,6 +125,14 @@ public class ImagePlayer extends JPanel implements ChangeListener {
 
                 if (slider.getMinimum() < slider.getValue()) {
                     slider.setValue(slider.getValue() - 1);
+                    
+                    try {
+                        audioCtl.setMillisecondPosition(getMillisecondFromFrame());
+                        period = System.currentTimeMillis();
+                    } catch (Exception ex) {
+                        System.err.println(ex.getMessage());
+                        ex.printStackTrace();
+                    }
                 }
             }
         });
@@ -118,6 +144,14 @@ public class ImagePlayer extends JPanel implements ChangeListener {
 
                 if (slider.getValue() < slider.getMaximum()) {
                     slider.setValue(slider.getValue() + 1);
+                }
+
+                try {
+                    audioCtl.setMillisecondPosition(getMillisecondFromFrame());
+                    period = System.currentTimeMillis();
+                } catch (Exception ex) {
+                    System.err.println(ex.getMessage());
+                    ex.printStackTrace();
                 }
             }
         });
@@ -132,28 +166,44 @@ public class ImagePlayer extends JPanel implements ChangeListener {
 
                 bPlayed = true;
                 nbCurFrame = slider.getValue();
+
+                period = System.currentTimeMillis();
                 
                 // Runs outside of the Swing UI thread
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        while (bPlayed) {
-                            // Runs inside of the Swing UI thread
 
+                        try {
+                            audioCtl.play(getMillisecondFromFrame());
+                        } catch (Exception ex) {
+                            System.err.println(ex.getMessage());
+                            ex.printStackTrace();
+                        }
+
+                        period = System.currentTimeMillis();
+
+                        while (bPlayed) {
                             if (nbCurFrame + 1 == frameCtl.getTotalFrameCnt()) {
                                 bPlayed = false;
                                 break;
                             } 
-                            try {
-                                if (0 == nbCurFrame % 3) {
-                                    Thread.sleep(34);
-                                } else {
-                                    Thread.sleep(33);
+
+                            try {       
+                                long current = System.currentTimeMillis();
+                                long interval = current - period;
+                                if (interval < (0 == nbCurFrame % 3 ? 34 : 33)) {
+                                    Thread.sleep(0);
+                                    continue;
                                 }
+
+                                System.out.println("interval : " + interval);
+                                period = current;
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
 
+                            // Runs inside of the Swing UI thread
                             SwingUtilities.invokeLater(new Runnable() {
                                 @Override
                                 public void run() {
@@ -163,15 +213,12 @@ public class ImagePlayer extends JPanel implements ChangeListener {
                                         System.out.println(e.getMessage());
                                         e.printStackTrace();
                                     }
-
                                 }
                             });
                         }
                 
                         System.out.println("Thread end "+Thread.currentThread().getName());
                     }
-
-                    
                 }).start();
 			}
         });
@@ -179,7 +226,8 @@ public class ImagePlayer extends JPanel implements ChangeListener {
         btnStop.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
                 bPlayed = false;
-
+                
+                audioCtl.pause();
 			}
         });
     }
@@ -187,15 +235,24 @@ public class ImagePlayer extends JPanel implements ChangeListener {
     @Override
     public void stateChanged(ChangeEvent e) {
         if ((JSlider) e.getSource() == slider) {
-            if (null == frameCtl) return;
-            try {
-                nbCurFrame = slider.getValue();
-                lblFrameStr.setText((nbCurFrame + 1) + " th / " + frameCtl.getTotalFrameCnt() + " Total");
-                setFramePos(nbCurFrame);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                System.out.println(ex.getMessage());
-                ex.printStackTrace();
+            if (!slider.getValueIsAdjusting()) {
+                if (null == frameCtl) return;
+                try {
+                    nbCurFrame = slider.getValue();
+                    lblFrameStr.setText((nbCurFrame + 1) + " th / " + frameCtl.getTotalFrameCnt() + " Total");
+                    setFramePos(nbCurFrame);
+
+                    // long duration = System.currentTimeMillis();
+                    // System.out.println(String.format("interval : %d", duration - period));
+                    // period = duration;
+
+                    // if (nbCurFrame % 100 == 1)
+                    //     audioCtl.setMillisecondPosition(getMillisecondFromFrame());
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    System.out.println(ex.getMessage());
+                    ex.printStackTrace();
+                }
             }
         }
     }
@@ -212,6 +269,9 @@ public class ImagePlayer extends JPanel implements ChangeListener {
             slider.setMinimum(0);
             slider.setMaximum(nbTotalFrame - 1);
             lblFrameStr.setText("1 th / " + nbTotalFrame + " Total");
+
+            audioCtl = new AudioController();
+            audioCtl.load(pathName);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
@@ -276,5 +336,15 @@ public class ImagePlayer extends JPanel implements ChangeListener {
 
     public boolean isPlaying() {
         return bPlayed;
+    }
+
+    private long getMillisecondFromFrame() {
+        if (!isLoaded()) {
+            return 0;
+        }
+
+        if (nbCurFrame < 1) return 0;
+
+        return (nbCurFrame * 33) + ((long)(nbCurFrame / 3) + 1);
     }
 }
