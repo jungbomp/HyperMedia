@@ -15,7 +15,7 @@ Autio Format is .WAV which is 16 bits per sample, smpling rate of 44,100 samples
 
 The tool plays link metafile which is json file containing origin of hyperlink and destination. Once link area is selected on a frame, it jumps to linked video and play.
 
-![Demo](demo.gif)
+![Demo](demo.mp4)
 
 
 ### Compile & Run
