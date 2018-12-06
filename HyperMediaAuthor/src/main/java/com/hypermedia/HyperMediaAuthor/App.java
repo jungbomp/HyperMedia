@@ -6,6 +6,8 @@ import java.awt.Font;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -15,6 +17,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -25,7 +28,6 @@ import javax.swing.JSpinner;
 import javax.swing.ListModel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.DefaultListModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
@@ -70,6 +72,8 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
 
     JButton btnAddFrames;
     JButton btnRemoveFrames;
+
+    JCheckBox chckbxKeepBoundingSize;
 
     JButton btnSetFromSecondary;
     JSpinner spinnerFromSecondary;
@@ -163,6 +167,8 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
 
         btnAddFrames = new JButton();
         btnRemoveFrames = new JButton();
+
+        chckbxKeepBoundingSize = new JCheckBox();
 
         JLabel lblFrameFrom_2 = new JLabel("Frame From");
         lblFrameFrom_2.setHorizontalAlignment(SwingConstants.CENTER);
@@ -261,6 +267,10 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
         btnRemoveFrames.setBounds(570, 335, 80, 29);
         contentPane.add(btnRemoveFrames);
 
+        chckbxKeepBoundingSize.setText("Keep Bounding Size");
+        chckbxKeepBoundingSize.setBounds(440, 370, 160, 23);
+        contentPane.add(chckbxKeepBoundingSize);
+
         btnSetFromSecondary.setText("Set");
         btnSetFromSecondary.setBounds(1070, 150, 80, 29);
         contentPane.add(btnSetFromSecondary);
@@ -287,6 +297,17 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
                         SpinnerNumberModel modelTo = new SpinnerNumberModel(1, 1, nbFrames, 1);
                         spinnerTo.setModel(modelTo);
 
+                        linkFrames = new HashMap<String, HashMap<Integer, Rectangle>>();
+                        links = new HashMap<String, LinkInfoVO>();
+                        curLinkName = "";
+                        chckbxKeepBoundingSize.setSelected(false);
+
+                        try {
+                            DefaultListModel<String> dlm = (DefaultListModel<String>)list.getModel();
+                            dlm.clear();                            
+                        } catch (Exception ev) {
+                            JOptionPane.showMessageDialog(null, ev.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                         System.out.println(ex.getMessage());
@@ -341,10 +362,20 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
                     return;
                 }
                 
-                String linkName = JOptionPane.showInputDialog("Link name");
-                if (null == linkName || "" == linkName) return;
+                String linkName = null;
+                while (true) {
+	                linkName = JOptionPane.showInputDialog("Link name");
+	                if (null == linkName || linkName.trim().length() < 1) return;
+	                
+	                if (linkFrames.containsKey(linkName)) {
+	                	JOptionPane.showMessageDialog(null, linkName + " already exists. Choose other name.", "Error", JOptionPane.ERROR_MESSAGE);
+	                	continue;
+	                }
+	                
+	                break;
+                }
 
-                HashMap<Integer, Rectangle> hm = primaryPlayer.trackMotion(rect, trackingFrom, trackingTo);
+                HashMap<Integer, Rectangle> hm = primaryPlayer.trackMotion(rect, trackingFrom, trackingTo, chckbxKeepBoundingSize.isSelected());
                 JOptionPane.showMessageDialog(null, hm.size() + " frames are detected.", "Info", JOptionPane.INFORMATION_MESSAGE);
                 linkFrames.put(linkName, hm);
                 
@@ -354,7 +385,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
                     list.setSelectedValue(linkName, true);
                 } catch (Exception ev) {
                     JOptionPane.showMessageDialog(null, ev.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                    linkFrames.remove("linkName");
+                    linkFrames.remove(linkName);
                 }
 			}
         });
@@ -370,9 +401,38 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
                     primaryPlayer.updateImage();
                 } catch (Exception ev) {
                     JOptionPane.showMessageDialog(null, ev.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                    linkFrames.remove("linkName");
+                    linkFrames.remove(curLinkName);
                 }
         	}
+        });
+
+        list.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (2 == e.getClickCount() && -1 < list.getSelectedIndex()) {
+                    String linkName = JOptionPane.showInputDialog("Link Name :", list.getSelectedValue());
+                    if (null == linkName) return;
+                    
+                    if (linkName.trim().length() < 1) {
+                        JOptionPane.showMessageDialog(null, "Link name can't be empty or null string.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    HashMap<Integer, Rectangle> hm = linkFrames.get(list.getSelectedValue());
+                    linkFrames.remove(list.getSelectedValue());
+                    linkFrames.put(linkName, hm);
+
+                    try {
+                        DefaultListModel<String> dlm = (DefaultListModel<String>)list.getModel();
+                        dlm.set(list.getSelectedIndex(), linkName);
+                        list.setSelectedValue(linkName, true);
+                        curLinkName = linkName;
+                    } catch (Exception ev) {
+                        JOptionPane.showMessageDialog(null, ev.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        linkFrames.remove(linkName);
+                    }
+                }
+            }
         });
         
         btnConnectVideo.addActionListener(new ActionListener() {
@@ -396,69 +456,65 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
         
         btnSaveFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-                if (0 < links.size()) {
-                    final JFileChooser fc = new JFileChooser();
-                    fc.setAcceptAllFileFilterUsed(false);
-                    
-                    FileNameExtensionFilter filter = new FileNameExtensionFilter(FILE_EXTENSION.toUpperCase()+" (*."+FILE_EXTENSION+")", FILE_EXTENSION);
-                    fc.addChoosableFileFilter(filter);
+                if (links.size() < 1) {
+					JOptionPane.showMessageDialog(null, "Can't find any connected video or hyperlink", "Error", JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+                
+                InputStream in = null;
+                FileOutputStream fos = null;
+                
+                BufferedInputStream bis = null;
+                BufferedOutputStream bos = null;
 
-                    fc.setCurrentDirectory(new File(System.getProperty("user.dir")));
-                    if (JFileChooser.APPROVE_OPTION == fc.showSaveDialog(contentPane)) {
-                        InputStream in = null;
-                        FileOutputStream fos = null;
+                try {
+                	String pathName = primaryPlayer.getPathName();
+                	String fileName = "link" + "." + FILE_EXTENSION;
+                    String destFile = pathName + File.separator + fileName;                            
+                    File file = new File(destFile);
+                    if (file.exists()) {
+                        if (JOptionPane.NO_OPTION == JOptionPane.showConfirmDialog(null, "A link metafile already exists. Do you want to overwrite?", "File exist", JOptionPane.YES_NO_OPTION)) return;
+                    }
                         
-                        BufferedInputStream bis = null;
-                        BufferedOutputStream bos = null;
-
-                        try {
-                            String fileName = fc.getSelectedFile().toString();
-                            if (!(fileName.toLowerCase().endsWith("."+FILE_EXTENSION))) {
-                                fileName += "."+FILE_EXTENSION;
-                            }
-
-                            File file = new File(fileName);
-                            if (file.exists()) {
-                                if (JOptionPane.NO_OPTION == JOptionPane.showConfirmDialog(null, fileName + " already exists. Do you want to overwrite?", "File exist", JOptionPane.YES_NO_OPTION)) return;
-                            }
-                                
-                            ArrayList<LinkInfoVO> infos = new ArrayList<LinkInfoVO>();
-            
-                            ListModel<String> model = list.getModel();
-                            for (int i = 0; i < model.getSize(); i++) {
-                                model.getElementAt(i);
-                                infos.add(links.get(model.getElementAt(i)));
-                            }
-        
-                            String json = LinkInfoVO.toJson(infos);
-                            
-                            in = new ByteArrayInputStream(json.getBytes("UTF-8"));
-                            fos = new FileOutputStream(file);
-
-                            bis = new BufferedInputStream(in);
-                            bos = new BufferedOutputStream(fos);
-
-                            int nbOfByteRead = 0;
-                            byte[] buf = new byte[1024];
-                            while (-1 != (nbOfByteRead = bis.read(buf, 0, buf.length))) {
-                                bos.write(buf, 0, nbOfByteRead);
-                            }
-                        } catch (Exception ex) {
-                            JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                            System.out.println(ex.getMessage());
-                            ex.printStackTrace();
-                        } finally {
-                            try {
-                                if (null != bos) bos.close();
-                                if (null != bis) bis.close();
-                                if (null != fos) fos.close();
-                                if (null != in) in.close();
-                            } catch (Exception ex) {
-                                System.err.println(ex.getMessage());
-                            } finally {
-                                JOptionPane.showMessageDialog(null, "Saved.", "", JOptionPane.INFORMATION_MESSAGE);
-                            }
+                    ArrayList<LinkInfoVO> infos = new ArrayList<LinkInfoVO>();
+    
+                    ListModel<String> model = list.getModel();
+                    for (int i = 0; i < model.getSize(); i++) {
+                        if (!links.containsKey(model.getElementAt(i))) {
+                        	throw new Exception("Can't find connected video of " + model.getElementAt(i) + " hyperlink.");
                         }
+                        
+                        infos.add(links.get(model.getElementAt(i)));
+                    }
+
+                    String json = LinkInfoVO.toJson(infos);
+                    
+                    in = new ByteArrayInputStream(json.getBytes("UTF-8"));
+                    fos = new FileOutputStream(file);
+
+                    bis = new BufferedInputStream(in);
+                    bos = new BufferedOutputStream(fos);
+
+                    int nbOfByteRead = 0;
+                    byte[] buf = new byte[1024];
+                    while (-1 != (nbOfByteRead = bis.read(buf, 0, buf.length))) {
+                        bos.write(buf, 0, nbOfByteRead);
+                    }
+                    
+                    JOptionPane.showMessageDialog(null, "Saved.", "", JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    System.out.println(ex.getMessage());
+                    ex.printStackTrace();
+                } finally {
+                    try {
+                        if (null != bos) bos.close();
+                        if (null != bis) bis.close();
+                        if (null != fos) fos.close();
+                        if (null != in) in.close();
+                    } catch (Exception ex) {
+                        System.err.println(ex.getMessage());
+                    } finally {
                     }
                 }
 			}
@@ -467,7 +523,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
         btnUpdate.addActionListener(new ActionListener() {        
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (null == curLinkName || "" == curLinkName) return;
+                if (null == curLinkName || curLinkName.trim().length() < 1) return;
                 if (!linkFrames.containsKey(curLinkName)) return;
 
                 int trackingFrom = (Integer)spinnerFrom.getValue() - 1;
@@ -527,7 +583,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
 
         btnAddFrames.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (null == curLinkName || "" == curLinkName) return;
+                if (null == curLinkName || curLinkName.trim().length() < 1) return;
                 if (!linkFrames.containsKey(curLinkName)) return;
 
                 Rectangle rect = primaryPlayer.getDraggedRectangle();
@@ -554,7 +610,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
                     return;
                 }
 
-                HashMap<Integer, Rectangle> hm = primaryPlayer.trackMotion(rect, trackingFrom, trackingTo);
+                HashMap<Integer, Rectangle> hm = primaryPlayer.trackMotion(rect, trackingFrom, trackingTo, chckbxKeepBoundingSize.isSelected());
                 linkFrames.get(curLinkName).putAll(hm);
                 primaryPlayer.setTrackingFrames(linkFrames.get(curLinkName));
                 
@@ -571,7 +627,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
 
         btnRemoveFrames.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (null == curLinkName || "" == curLinkName) return;
+                if (null == curLinkName || curLinkName.trim().length() < 1) return;
                 if (!linkFrames.containsKey(curLinkName)) return;
                 
                 int trackingFrom = (Integer)spinnerFrom.getValue() - 1;
@@ -615,13 +671,13 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
 
     public LinkInfoVO genLinkInfo(String linkName) throws Exception {
         if (false == linkFrames.containsKey(linkName)) {
-            throw new Exception("Can't find link bounding box from primary video.");
+            throw new Exception("Can't find any hyperlink named " + linkName + " from primary video.");
         }
 
         String srcPathName = primaryPlayer.getPathName();
         
         String linkPathName = secondaryPlayer.getPathName();
-        int nbLinkFrameFrom = (Integer)spinnerFromSecondary.getValue();
+        int nbLinkFrameFrom = secondaryPlayer.getCurFrameNum();
         
         LinkInfoVO linkInfo = new LinkInfoVO();
         linkInfo.setLinkName(linkName);
@@ -643,7 +699,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
     
     @Override
 	public void frameChanged(int nbFrame, BufferedImage image) {
-        if (null == curLinkName || "" == curLinkName) return;
+        if (null == curLinkName || curLinkName.trim().length() < 1) return;
 
         HashMap<Integer, Rectangle> hm = linkFrames.get(curLinkName);
         curLinkName = null; // To avoid repeated drawing image from stateChanged()
@@ -668,7 +724,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
     @Override
     public void stateChanged(ChangeEvent e) {
         if (primaryPlayer.isPlaying()) return;
-        if (null == curLinkName || "" == curLinkName) return;
+        if (null == curLinkName || curLinkName.trim().length() < 1) return;
         if (!linkFrames.containsKey(curLinkName)) return;
         
         HashMap<Integer, Rectangle> hm = linkFrames.get(curLinkName);

@@ -154,10 +154,10 @@ public class AuthorPlayer extends ImagePlayer implements MouseMotionListener, Im
         this.hmTracking = hm;
     }
 
-    public HashMap<Integer, Rectangle> trackMotion(final Rectangle rect, final int nbFrameFrom, int nbFrameTo) {
+    public HashMap<Integer, Rectangle> trackMotion(final Rectangle rect, final int nbFrameFrom, int nbFrameTo, boolean bKeepSize) {
         int nbCurFrame = getCurFrameNum();
-        HashMap<Integer, Rectangle> hm = trackMotion(rect, nbCurFrame, nbFrameTo, true);
-        hm.putAll(trackMotion(rect, nbCurFrame, nbFrameFrom, false));
+        HashMap<Integer, Rectangle> hm = trackMotion(rect, nbCurFrame, nbFrameTo, true, bKeepSize);
+        hm.putAll(trackMotion(rect, nbCurFrame, nbFrameFrom, false, bKeepSize));
         hm.put(nbCurFrame, new Rectangle(rect));
 
         this.rect.width = this.rect.height = 0;
@@ -165,7 +165,7 @@ public class AuthorPlayer extends ImagePlayer implements MouseMotionListener, Im
         return hm;
     }
 
-    public HashMap<Integer, Rectangle> trackMotion(final Rectangle rect, final int nbCurFrame, int nbFrameTo, boolean bForward) {
+    public HashMap<Integer, Rectangle> trackMotion(final Rectangle rect, final int nbCurFrame, int nbFrameTo, boolean bForward, boolean bKeepSize) {
         HashMap<Integer, Rectangle> hm = new HashMap<Integer, Rectangle>();
         
         MotionTracker tracker = new MotionTracker();
@@ -186,6 +186,32 @@ public class AuthorPlayer extends ImagePlayer implements MouseMotionListener, Im
                     }
     
                     Rectangle rt = new Rectangle((int)boundingBox.x(), (int)boundingBox.y(), (int)boundingBox.width(), (int)boundingBox.height());
+                    if (rt.x < 0) {
+                        int offset = rt.x;
+                        rt.x = 0;
+                        rt.width += offset;
+                    }
+
+                    if (rt.y < 0) {
+                        int offset = rt.y;
+                        rt.y = 0;
+                        rt.height += offset;
+                    }
+
+                    if (bKeepSize) {
+                        if (rt.width < rect.width) {
+                            rt.x = rt.x - ((rect.width - rt.width) / 2);
+                            rt.width = rt.width + ((rect.width - rt.width) / 2) + ((rect.width - rt.width) % 2);
+                            if (rt.x < 0) rt.x = 0;
+                        }
+
+                        if (rt.height < rect.height) {
+                            rt.y = rt.y - ((rect.height - rt.height) / 2);
+                            rt.height = rt.height + ((rect.height - rt.height) / 2) + ((rect.height - rt.height) % 2);
+                            if (rt.y < 0) rt.y = 0;
+                        }
+                    }
+                    
                     hm.put(i, rt);
                 }
             } else {
