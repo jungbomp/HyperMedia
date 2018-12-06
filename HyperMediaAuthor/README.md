@@ -1,19 +1,20 @@
-# CS576_HyperLinkPlayer
+# HyperMedia Author
 ### Compile & Run
 
 ```bash
-$ mvn install
-$ java -jar target/HyperLinkPlayer.jar
+$ cd HyperMediaAuthor
+$ mvn package
+$ java -jar target/HyperMediaAuthor.jar
 ```
 
+### Clean
 
+```bash
+$ cd HyperMediaAuthor
+$ mvn clean
+```
 
 ### Status
 
-change json structure to `Map <frameNum, List<LinkInfo>>` in case that multiple links in one frame.
+Version 1.0
 
-file control is not finished.
-
-almost done.
-
-continue on Friday.
