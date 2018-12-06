@@ -49,10 +49,10 @@ public class AuthorPlayer extends ImagePlayer implements MouseMotionListener, Im
 
     @Override
     public void mouseMoved(MouseEvent e) {
-        System.out.println("Mouse Moved"
-            + " (" + e.getX() + "," + e.getY() + ")"
-            + " detected on "
-            + e.getComponent().getClass().getName());
+//        System.out.println("Mouse Moved"
+//            + " (" + e.getX() + "," + e.getY() + ")"
+//            + " detected on "
+//            + e.getComponent().getClass().getName());
         
         if ((ImagePanel)e.getSource() == getPanel() && bDragged) {
             mouseDragged(e);
@@ -62,25 +62,27 @@ public class AuthorPlayer extends ImagePlayer implements MouseMotionListener, Im
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        System.out.println("Mouse Dragged"
-            + " (" + e.getX() + "," + e.getY() + ")"
-            + " detected on "
-            + e.getComponent().getClass().getName());
+//        System.out.println("Mouse Dragged"
+//            + " (" + e.getX() + "," + e.getY() + ")"
+//            + " detected on "
+//            + e.getComponent().getClass().getName());
         
         if ((ImagePanel)e.getSource() == getPanel()) {
             if (!isLoaded()) return;
 
             try {
             	do {
-	            	if (null != hmTracking && hmTracking.containsKey(getCurFrameNum())) {
-	            		Rectangle tRect = hmTracking.get(getCurFrameNum());
-	            		if (tRect.x <= e.getX() && e.getX() <= tRect.x + tRect.width && tRect.y <= e.getY() && e.getY() <= tRect.y + tRect.height) {
-	            			tRect.x += (e.getX() - (tRect.x + tRect.width / 2));
-	            			tRect.y += (e.getY() - (tRect.y + tRect.height / 2));
-	            			
-	            			continue;
-	            		}
-	            	}
+                    if (!bDragged) {
+                        if (null != hmTracking && hmTracking.containsKey(getCurFrameNum())) {
+                            Rectangle tRect = hmTracking.get(getCurFrameNum());
+                            if (tRect.x <= e.getX() && e.getX() <= tRect.x + tRect.width && tRect.y <= e.getY() && e.getY() <= tRect.y + tRect.height) {
+                                tRect.x += (e.getX() - (tRect.x + tRect.width / 2));
+                                tRect.y += (e.getY() - (tRect.y + tRect.height / 2));
+                                
+                                continue;
+                            }
+                        }
+                    }
 	            	
 	                Point ptFrom = pt;
 	                Point ptTo = new Point(e.getX(), e.getY());
@@ -211,7 +213,7 @@ public class AuthorPlayer extends ImagePlayer implements MouseMotionListener, Im
                             if (rt.y < 0) rt.y = 0;
                         }
                     }
-                    
+
                     hm.put(i, rt);
                 }
             } else {

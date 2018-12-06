@@ -186,7 +186,24 @@ public class App extends JFrame {
                             return;
                         }
                         
-                        LinkContext context = getLinkContextFromMediaPath(f.getAbsolutePath(), "", 0, 0);
+                        if (player.isPlaying()) player.stop();
+                        
+                        LinkContext context = null;
+                        try {
+                        	context = getLinkContextFromMediaPath(f.getAbsolutePath(), "", 0, 0);
+                        } catch (Exception ex) {
+                        	System.err.println(ex.getMessage());
+    						
+    						String destPathName = f.getAbsolutePath();
+    						String mediaName = destPathName.substring(destPathName.lastIndexOf(File.separator) + 1);
+    						
+    						context = new LinkContext();
+    						context.setLinkName("");
+    						context.setMediaName(mediaName);
+    						context.setPathName(destPathName);
+    						context.setCurFrame(0);
+    						context.setStartFrame(0);
+                        }
                         
                         listContext = new ArrayList<LinkContext>();
                         listContext.add(context);
@@ -236,18 +253,18 @@ public class App extends JFrame {
         player.setMouseMotionListener(new MouseMotionListener() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                System.out.println("Mouse Moved"
-                + " (" + e.getX() + "," + e.getY() + ")"
-                + " detected on "
-                + e.getComponent().getClass().getName());
+                // System.out.println("Mouse Moved"
+                // + " (" + e.getX() + "," + e.getY() + ")"
+                // + " detected on "
+                // + e.getComponent().getClass().getName());
             }
         
             @Override
             public void mouseDragged(MouseEvent e) {
-                System.out.println("Mouse Dragged"
-                + " (" + e.getX() + "," + e.getY() + ")"
-                + " detected on "
-                + e.getComponent().getClass().getName());
+                // System.out.println("Mouse Dragged"
+                // + " (" + e.getX() + "," + e.getY() + ")"
+                // + " detected on "
+                // + e.getComponent().getClass().getName());
             }
         });
 
@@ -300,6 +317,7 @@ public class App extends JFrame {
                     LinkContext destContext = null;
                     try {
 						destContext = getLinkContextFromMediaPath(info.getDestinationPathName(), linkName, 0, 0);
+						destContext.setCurFrame(info.getDestinationFrameFrom());
 					} catch (IOException ex) {
 						System.err.println(ex.getMessage());
 						
@@ -463,7 +481,8 @@ public class App extends JFrame {
     }
     
     private LinkContext getLinkContextFromMediaPath(final String linkPath, final String linkName, final int startFrame, final int endFrame) throws Exception {
-    	String linkFilePath = linkPath + File.separator + "link." + FILE_EXTENSION;
+        String linkFilePath = linkPath + File.separator + linkPath.substring(linkPath.lastIndexOf(File.separator) + 1) + "." + FILE_EXTENSION;
+                    
         File linkFile = new File(linkFilePath);
         if (!linkFile.exists()) {
             throw new IOException("Can't find link file from " + linkPath.toString());                            
@@ -471,7 +490,7 @@ public class App extends JFrame {
 
         return getLinkContextFromJson(linkFilePath, linkName, 0, 0);
     }
-
+    
 
     public static void main( String[] args ) {
         EventQueue.invokeLater(new Runnable() {

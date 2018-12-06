@@ -469,7 +469,7 @@ public class App extends JFrame implements AuthorPlayerEventListener, ChangeList
 
                 try {
                 	String pathName = primaryPlayer.getPathName();
-                	String fileName = "link" + "." + FILE_EXTENSION;
+                    String fileName = pathName.substring(pathName.lastIndexOf(File.separator) + 1) + "." + FILE_EXTENSION;                    
                     String destFile = pathName + File.separator + fileName;                            
                     File file = new File(destFile);
                     if (file.exists()) {
