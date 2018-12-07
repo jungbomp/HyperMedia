@@ -6,7 +6,8 @@
 
   <groupId>com.hypermedia.HyperMediaAuthor</groupId>
   <artifactId>HyperMediaAuthor</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <version>1.0</version>
 
   <name>HyperMediaAuthor</name>
   <!-- FIXME change it to the project's website -->
@@ -38,7 +39,6 @@
   </dependencies>
 
   <build>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -52,6 +52,10 @@
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.7.0</version>
+          <configuration>
+            <source>1.8</source>
+            <target>1.8</target>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -69,7 +73,34 @@
           <artifactId>maven-deploy-plugin</artifactId>
           <version>2.8.2</version>
         </plugin>
+
+        <!-- HyperMediaAuthor -->
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>3.1.0</version>
+          <executions>
+            <execution>
+              <id>HyperMediaAuthor</id>
+              <phase>package</phase>
+              <goals>
+                <goal>single</goal>
+              </goals>
+              <configuration>
+                <archive>
+                  <manifest>
+                    <mainClass>com.hypermedia.HyperMediaAuthor.App</mainClass>
+                  </manifest>
+                </archive>
+                <descriptorRefs>
+                  <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
+                <finalName>HyperMediaAuthor</finalName>
+                <appendAssemblyId>false</appendAssemblyId>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
-    </pluginManagement>
+    
   </build>
 </project>
