@@ -2,9 +2,10 @@
 
 This is an implementation of [hyperlink media](https://en.wikipedia.org/wiki/Hypervideo) authoring and playing tool on Java 1.7, OpenCV (bytedeco). The User Interface is implementd with Java Swing UI. It is based on a series of images and corresponding .WAV file. Video playing parts draw each image at 30 fps. The WAV file is basically recoreded corresponding 30 fps images. Sample images and .WAV file attached in media directory.
 
-## [authoring](https://jungbomp.github.io/HyperMedia/HyperMediaAuthor/)
+## [Authoring](https://jungbomp.github.io/HyperMedia/HyperMediaAuthor/)
 ![Authoring tool sample screen shot](screenshot01.png)
 
+## [Player](https://jungbomp.github.io/HyperMedia/HyperMediaPlayer/)
 ![Playing tool sample screen shot](screenshot02.png)
 
 The repository includes:
